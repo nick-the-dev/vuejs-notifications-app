@@ -16,8 +16,15 @@ export default {
 </script>
 
 <style>
+@import "./assets/fonts/fonts.css";
+
+* {
+  box-sizing: border-box;
+}
+
 #app {
   background-color: #f5f5f5;
   direction: rtl;
+  padding-top: 45px;
 }
 </style>
