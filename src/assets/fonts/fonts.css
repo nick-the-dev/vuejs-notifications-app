@@ -1,21 +1,21 @@
 @font-face {
   font-family: "AlmoniNeue";
-  src: local("AlmoniNeue/300"), url("AlmoniNeue/300.woff") format("woff");
+  src: local("AlmoniNeue/300"), url("http://localhost:59460/Content/fonts/AlmoniNeue/300.woff") format("woff");
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
   font-family: "AlmoniNeueBold";
-  src: local("AlmoniNeueBold/700"),
-    url("AlmoniNeueBold/700.woff") format("woff");
+  src: local("almoni-neue-aaa-700"),
+    url("http://localhost:59460/Content/fonts/almoni-neue-aaa-700/almoni-neue-aaa-700.woff") format("woff");
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
   font-family: "AlmoniTzar";
-  src: local("AlmoniTzar/400"), url("AlmoniTzar/400.woff") format("woff");
+  src: local("AlmoniTzar/400"), url("http://localhost:59460/Content/fonts/AlmoniTzar/400.woff") format("woff");
   font-weight: normal;
   font-style: normal;
 }

@@ -1,4 +1,4 @@
-<template>
+<template v-if="$store.state.account.dataLoaded">
   <div class="account">
     <div class="account-box registered">
       <svg
@@ -381,13 +381,13 @@
       </svg>
       <div class="text">
         <span class="title">המנויים שלך</span>
-        <span class="subtitle">1005 מנויים</span>
+        <span class="subtitle">{{$store.state.account.data.NumberOfSubscribers}} מנויים</span>
       </div>
     </div>
-    <div class="account-box package">
+    <div v-if="!$store.state.account.data.UpgradeRequired" class="account-box package">
       <div class="text">
         <span class="title">החבילה שלך</span>
-        <span class="subtitle">עד 2000 מנויים</span>
+        <span class="subtitle">עד {{$store.state.account.data.CurrentPackage}} מנויים</span>
       </div>
       <svg xmlns="http://www.w3.org/2000/svg" width="83.517" height="95.262">
         <defs>
@@ -583,12 +583,100 @@
         </g>
       </svg>
     </div>
+    <div v-else class="account-box package package--upgrade">
+      <div class="text">
+        <span class="title">החבילה שלך</span>
+        <span class="subtitle">עד {{$store.state.account.data.CurrentPackage}} מנויים</span>
+      </div>
+      <Button text="שדרג חבילה" @click.native="upgradePackage" />
+    </div>
   </div>
 </template>
 
 <script>
+import Button from './Button.vue';
+import UpgradePackageModal from "@/components/modals/UpgradePackageModal.vue"
+
 export default {
   name: "UserAccount",
+  methods: {
+    upgradePackage() {
+      this.$modal.show(
+        UpgradePackageModal,
+        {},
+        {width: '500px', height: 'auto'}
+      );
+    }
+  },
+  computed: {
+    accountDataLoaded: {
+      get () {
+        return this.$store.state.account.dataLoaded
+      },
+      set (value) {
+        this.$store.commit('updateAccountDataLoaded', value)
+      }
+    },
+    accountCurrentPackage: {
+      get () {
+        return this.$store.state.account.data.CurrentPackage
+      },
+      set (value) {
+        this.$store.commit('updateAccountCurrentPackage', value)
+      }
+    },
+    accountCurrentPackagePrice: {
+      get () {
+        return this.$store.state.account.data.CurrentPackagePrice
+      },
+      set (value) {
+        this.$store.commit('updateAccountCurrentPackagePrice', value)
+      }
+    },
+    accountName: {
+      get () {
+        return this.$store.state.account.data.Name
+      },
+      set (value) {
+        this.$store.commit('updateAccountName', value)
+      }
+    },
+    accountNextPackage: {
+      get () {
+        return this.$store.state.account.data.NextPackage
+      },
+      set (value) {
+        this.$store.commit('updateAccountNextPackage', value)
+      }
+    },
+    accountNextPackagePrice: {
+      get () {
+        return this.$store.state.account.data.NextPackagePrice
+      },
+      set (value) {
+        this.$store.commit('updateAccountNextPackagePrice', value)
+      }
+    },
+    accountNumberOfSubscribers: {
+      get () {
+        return this.$store.state.account.data.NumberOfSubscribers
+      },
+      set (value) {
+        this.$store.commit('updateAccountNumberOfSubscribers', value)
+      }
+    },
+    accountUpgradeRequired: {
+      get () {
+        return this.$store.state.account.data.UpgradeRequired
+      },
+      set (value) {
+        this.$store.commit('updateAccountUpgradeRequired', value)
+      }
+    },
+  },
+  components: {
+    Button
+  }
 };
 </script>
 
@@ -631,5 +719,13 @@ export default {
 
 .account-box svg {
   margin-bottom: -50px;
+}
+
+.package--upgrade .vue-btn {
+  font-size: 16px;
+  line-height: 1;
+  padding: 11px 20px;
+  align-self: center;
+  margin-top: 11px;
 }
 </style>

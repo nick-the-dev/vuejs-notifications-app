@@ -1,5 +1,5 @@
 <template>
-  <button class="btn">
+  <button class="vue-btn">
     <template v-if="hasPlusIcon">
       <svg xmlns="http://www.w3.org/2000/svg" width="19.648" height="19.648">
         <g data-name="Group 2750" transform="translate(-248 -139)">
@@ -38,13 +38,13 @@ export default {
   name: "Button",
   props: {
     text: String,
-    hasPlusIcon: Boolean,
+    hasPlusIcon: Boolean
   },
 };
 </script>
 
 <style>
-.btn {
+.vue-btn {
   font-family: "AlmoniNeueBold";
   font-size: 18px;
   display: flex;
@@ -58,7 +58,7 @@ export default {
   cursor: pointer;
 }
 
-.btn svg {
+.vue-btn svg {
   margin-left: 11px;
 }
 </style>

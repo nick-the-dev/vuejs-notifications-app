@@ -3,9 +3,10 @@
     <div class="notifications-header">
       <div class="greeting-wrapper">
         <h2>היי מור, ברוכים הבאים למערכת שליחת הודעות</h2>
-        <button class="app-info-btn">?מה זה מערכת שליחת הודעות</button>
+        <button @click="showAppInfoModal" class="app-info-btn">?מה זה מערכת שליחת הודעות</button>
       </div>
-      <Button text="צור הודעה חדשה" hasPlusIcon></Button>
+      <Button text="צור הודעה חדשה" hasPlusIcon @click.native="createNewMessage"></Button>
+      
     </div>
     <UserAccount />
     <div class="messages-archive">
@@ -21,7 +22,7 @@
           :layout="['prev', 'jumper', 'next']"
         />
       </div>
-      <span class="total-pages">מתוך XXX עמודים</span>
+      <span class="total-pages">מתוך {{Math.ceil(totalCount / pageSize)}} עמודים</span>
     </div>
   </div>
 </template>
@@ -29,8 +30,12 @@
 <script>
 import Button from "../Button.vue";
 import UserAccount from "../UserAccount.vue";
-
-let DB_DATA = [];
+import axios from "axios";
+import iconPrev from "@/assets/prev.svg";
+import iconNext from "@/assets/next.svg";
+import AppInfoModal from "../modals/AppInfoModal.vue";
+import MessageCardModal from "@/components/modals/MessageCardModal.vue"
+import MoreSubscribersModal from '../modals/MoreSubscribersModal.vue';
 
 export default {
   name: "DashboardPage",
@@ -40,17 +45,21 @@ export default {
   },
   data: function () {
     return {
+      images: {
+        iconPrev,
+        iconNext
+      },
       pageIndex: 1,
       pageSize: 10,
       columns: [
-        { field: "date", key: "a", title: "תאריך", align: "right" },
-        { field: "time", key: "b", title: "שעה", align: "right" },
-        { field: "message", key: "c", title: "תוכן הודעה", align: "right" },
-        { field: "howManySent", key: "d", title: "לכמה נשלח" },
-        { field: "howManyReceived", key: "e", title: "לכמה הגיעה" },
-        { field: "howManyClicked", key: "f", title: "כמה לחצו" },
+        { field: "CreationDate", key: "a", title: "תאריך", align: "right"},
+        { field: "CreationTime", key: "b", title: "שעה", align: "right" },
+        { field: "MessageText", key: "c", title: "תוכן הודעה", align: "right", width: "300px" },
+        { field: "SentCount", key: "d", title: "לכמה נשלח" },
+        { field: "ReceivedCount", key: "e", title: "לכמה הגיעה" },
+        { field: "ClickCount", key: "f", title: "כמה לחצו" },
         {
-          field: "status",
+          field: "Status",
           key: "g",
           title: "סטטוס",
           // eslint-disable-next-line no-unused-vars
@@ -225,14 +234,14 @@ export default {
           },
         },
         {
-          filed: "copyMessage",
+          field: "copyMessage",
           key: "h",
           title: "",
           // eslint-disable-next-line no-unused-vars
           renderBodyCell: ({ row, column, rowIndex }, h) => {
             return (
               <div class="copy-wrapper">
-                <button>
+                <button onclick={this.copyMessageToEditor} data-id={row.Id}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -274,13 +283,13 @@ export default {
           },
         },
         {
-          filed: "view",
+          field: "view",
           key: "i",
           title: "",
           // eslint-disable-next-line no-unused-vars
           renderBodyCell: ({ row, column, rowIndex }, h) => {
             return (
-              <button>
+              <button onclick={this.showMessageCardModal} data-id={row.Id}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="21.312"
@@ -336,19 +345,21 @@ export default {
               </button>
             );
           },
-        },
+        }
       ],
+      messagesData: [],
+      accountData: {},
     };
   },
   computed: {
     // table data
     tableData() {
       const { pageIndex, pageSize } = this;
-      return DB_DATA.slice((pageIndex - 1) * pageSize, pageIndex * pageSize);
+      return this.messagesData.slice((pageIndex - 1) * pageSize, pageIndex * pageSize);
     },
     // total count
     totalCount() {
-      return DB_DATA.length;
+      return this.messagesData.length;
     },
   },
   methods: {
@@ -364,31 +375,495 @@ export default {
     },
 
     // Simulation table data
-    initDatabase() {
-      DB_DATA = [];
-      for (let i = 0; i < 1000; i++) {
-        DB_DATA.push({
-          date: "02/01/2019",
-          time: "17:38",
-          message: "10% הנחה על כל הדגמים לרגל השקת האתר החדש...",
-          howManySent: "175" + i,
-          howManyReceived: "98",
-          howManyClicked: "64",
-          status: "1",
-        });
+    getMessagesData() {
+      let data = [];
+
+      axios.get("/Notifications/GetAccountJson")
+      .then(response => {
+        console.log(response)
+        // Make http request but sereve test data to make test
+
+        const fakeResponse = {
+          "Errors": "",
+          "Notifications": [
+            {
+              "Title": "Title1",
+              "MessageText": "Message 1",
+              "ImageUrl": "https://via.placeholder.com/300/09f/fff.png",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1",
+              "Id": "123",
+              "ButtonText": "Button Text1",
+              "ButtonUrl": "https://www.google.com/"
+            },
+            {
+              "Title": "Title2",
+              "MessageText": "Message 2",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0",
+              "Id": "124",
+              "ButtonText": "Button Text2",
+              "ButtonUrl": "https://www.amazon.com/"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2",
+              "Id": "125"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1",
+              "Id": "126"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0",
+              "Id": "127"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2",
+              "Id": "128"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1",
+              "Id": "129"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0",
+              "Id": "130"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2",
+              "Id": "131"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1",
+              "Id": "132"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0",
+              "Id": "133"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2",
+              "Id": "134"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1",
+              "Id": "135"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 10,
+              "ReceivedCount": 9,
+              "ClickCount": 9,
+              "Status": "1"
+            },
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "17:38",
+              "SentCount": 1,
+              "ReceivedCount": 2,
+              "ClickCount": 3,
+              "Status": "0"
+            },
+
+            {
+              "MessageText": "10% הנחה על כל הדגמים לרגל השקת האתר החדש...	",
+              "ImageUrl": "https://via.placeholder.com/150",
+              "CreationDate": "02/01/2019",
+              "CreationTime": "12:38",
+              "SentCount": 7,
+              "ReceivedCount": 4,
+              "ClickCount": 8,
+              "Status": "2"
+            },
+          ]
+        }
+        fakeResponse.Notifications.forEach(item => {
+          data.push(item)
+
+          
+        })
+        this.messagesData = data;
+        
+      })
+
+      
+    },
+
+    getAccountData() {
+      let data = {};
+
+      axios.get("/Notifications/GetAccountJson")
+      .then(response => {
+        console.log(response)
+        // Make http request but sereve test data to make test
+
+        const fakeResponse = {
+          "Name":"NAME",
+          "NumberOfSubscribers":"900",
+          "CurrentPackage":"1000",
+          "CurrentPackagePrice":"100",
+          "NextPackage": "3000",
+          "NextPackagePrice": "300",
+          "UpgradeRequired": false // Should be true if number of subscribers is bigger than current package
+        }
+        data = fakeResponse;
+        
+        this.accountData = data;
+        console.log(this.accountData)
+        this.$store.commit('updateAccountDataLoaded', true)
+        this.$store.commit('updateAccountCurrentPackage', data.CurrentPackage)
+        this.$store.commit('updateAccountCurrentPackagePrice', data.CurrentPackagePrice)
+        this.$store.commit('updateAccountName', data.Name)
+        this.$store.commit('updateAccountNextPackage', data.NextPackage)
+        this.$store.commit('updateAccountNextPackagePrice', data.NextPackagePrice)
+        this.$store.commit('updateAccountNumberOfSubscribers', data.NumberOfSubscribers)
+        this.$store.commit('updateAccountUpgradeRequired', data.UpgradeRequired)
+        this.checkSubscribersCount()
+       
+      })
+
+       
+    },
+
+    showAppInfoModal () {
+      this.$modal.show(
+        AppInfoModal
+      );
+    },
+
+    showMessageCardModal (e) {
+      const messageId = e.target.closest('button').attributes['data-id'].value;
+      const message = this.messagesData.filter(message => message.Id == messageId)[0];
+      this.$modal.show(
+        MessageCardModal,
+        {
+          imageUrl: message.ImageUrl,
+          title: message.Title,
+          text: message.MessageText,
+          buttonText: message.ButtonText,
+          buttonUrl: message.ButtonUrl
+        },
+        { height: 'auto'}
+      );
+    },
+
+    copyMessageToEditor(e) {
+      if (this.$store.state.account.data.UpgradeRequired) {
+        this.checkSubscribersCount();
+      } else {
+        const messageId = e.target.closest('button').attributes['data-id'].value;
+        const message = this.messagesData.filter(message => message.Id == messageId)[0];
+        this.$store.commit('updateEditPageImage', message.ImageUrl);
+        this.$store.commit('updateEditPageTitle', message.Title);
+        this.$store.commit('updateEditPageText', message.MessageText);
+        this.$store.commit('updateEditPageButtonText', message.ButtonText);
+        this.$store.commit('updateEditPageButtonUrl', message.ButtonUrl);
+        this.$router.push('/edit')
+      }
+      
+    },
+    
+    checkSubscribersCount() {
+      const currenPackage = parseInt(this.$store.state.account.data.CurrentPackage);
+      const subscribersCount = parseInt(this.$store.state.account.data.NumberOfSubscribers); // Temp hardcoded value
+      if (subscribersCount >= currenPackage) {
+        this.$modal.show(
+          MoreSubscribersModal,
+          {},
+          {width: '500px', height: 'auto'}
+        );
       }
     },
+
+    createNewMessage() {
+      if (this.$store.state.account.data.UpgradeRequired) {
+        this.checkSubscribersCount();
+      } else {
+        this.$store.commit('updateEditPageImage', "");
+        this.$store.commit('updateEditPageTitle', "");
+        this.$store.commit('updateEditPageText', "");
+        this.$store.commit('updateEditPageButtonText', "לחץ/י כאן");
+        this.$store.commit('updateEditPageButtonUrl', "");
+        this.$router.push('/edit')
+      }
+      
+    }
   },
   created() {
-    this.initDatabase();
+    this.getAccountData();
+    this.getMessagesData();
   },
+
+  mounted: function () {
+  }
 };
 </script>
 
 <style>
 .app-container {
-  width: 90%;
-  max-width: 1210px;
+  width: 100%;
+  max-width: 1200px;
   padding: 0 15px;
   margin: 0 auto;
 }
@@ -398,6 +873,7 @@ export default {
   align-content: center;
   justify-content: space-between;
   margin-bottom: 28px;
+  padding-top: 20px;
 }
 
 .greeting-wrapper {
@@ -666,6 +1142,7 @@ body .ve-pagination .ve-pagination-goto .ve-pagination-goto-input {
   border-right: 1px solid #e7e7e9;
   margin-bottom: 0;
   height: 40px;
+  font-size: 16px;
 }
 
 body .ve-pagination .ve-pagination-li {
@@ -729,7 +1206,7 @@ body .icon-vet-left-arrow:before {
   display: block;
   width: 10px;
   height: 14px;
-  background: url(../../assets/prev.svg);
+  /* background: url('~@/assets/prev.svg') */
 }
 
 body .icon-vet-right-arrow:before {
@@ -737,12 +1214,21 @@ body .icon-vet-right-arrow:before {
   display: block;
   width: 10px;
   height: 14px;
-  background: url(../../assets/next.svg);
+  /* background: url(../../assets/next.svg); */
 }
 
 body .ve-pagination .ve-pagination-li a {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+th:nth-child(1), td:nth-child(1) {
+  min-width: unset!important;
+  font-family: 'AlmoniNeue';
+}
+
+td.ve-table-body-td[col-key="c"] {
+    padding-left: 50px!important;
 }
 </style>
